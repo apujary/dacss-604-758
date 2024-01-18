@@ -1,0 +1,678 @@
+---
+title: "Exploring Hindu Nationalism Discourse on Reddit through Text Analysis"
+author: "Ananya Pujary"
+format: 
+  html: 
+    embed-resources: true
+    self-contained-math: true
+---
+
+```{r}
+# setup chunk
+library("RedditExtractoR")
+library("tidyverse")
+library("ggplot2")
+library("quanteda")
+library("quanteda.textplots")
+library("skimr")
+library("textdata")
+library("stm")
+library("quanteda.dictionaries")
+library("quanteda.sentiment")
+library("patchwork")
+library("dplyr")
+library("tidytext")
+```
+
+## Literature Review
+
+One of my motivations for this project is the increasing Hindu nationalistic sentiment in India. Hindu nationalism can be defined as "the collection of political thought that is spiritually underpinned by the Hindu religious and cultural traditions of India. It is important to note, as various authors point out, Hindu nationalism is not the same as Hinduism" (Siyech, 2021, p. 2). It designates Hindus as the in-group and Dalits, Muslims, and secular liberals as the out-group. At the root of Hindu nationalism is the Hindutva ideology, which "conflates geographically based cultural, national, and religious identities that focus on the manifestation of Hinduness" (Siyech, 2021, p. 2).
+
+Historically, several events that occurred in the 70s-80s caused the strengthening of Hindu right-wing sentiments. Many right-wing publications propagated the idea that "Hindus are in danger of being overtaken by the Muslims" (Siyech, 2021, p. 5). Tensions reached a crescendo with the demolition of the Babri Mosque in 1992 (Siyech, 2021). Following this, the right-wing Bharatiya Janata Party (BJP) came to power between 1998-2004, and experienced a resurgence in support a decade after. Several factors contributed to this rise of right-wing extremism: 1) corruption within the left-wing Congress party, 2) failure of left-wing politics in India, 3) Islamist extremism in South Asia, 4) global rise of ethno-nationalism, 5) silence from the leaders, and 6) the internet's role in facilitating this extremism by creating echo chambers (Siyech, 2021).
+
+While the Indian government has taken steps to ban several social media channels for spreading fake political news, there has been a major growth in channels promoting extremist and nationalist views (M. N., 2023). These extremist views are manifesting in the real world too. Statistics from Hate Crime Watch showed that "91 percent of the hate crimes that have been documented in the past decade have occurred since the Modi government came to power, that is, 99 deaths and 703 wounded between May 2014 and April 2019 in crimes motivated by religious hatred (mostly of Muslims)" (Siyech, 2021, p. 3).
+
+While Reddit is the third most used social media platform in India after Facebook and Instagram, there is limited research based on the platform's data (Saraswat, 2022). Reddit had 3.57 million users in India in 2020 according to Statista, though it is only a fraction of other platforms of Instagram and Facebook, which are used by a staggering 349 million and 201 million users respectively (Saraswat, 2022). The structure of Reddit also varies greatly from the other two platforms, with the presence of subreddit moderators responsible for monitoring that space, rewards for discussion participation encouraging greater community engagement, and the anonymity it affords. Moderators from the r/India subreddit, the largest one pan-India, expressed their concerns with "the ineptness of the Reddit administration to understand the abuses or comments made in languages other than English" (Saraswat, 2022). They also reported a surge in hate towards minorities, primarily Muslims, Dalits, and Sikhs (Saraswat, 2022).
+
+Hence, based on the literature identified above, this project aims to fill the gap of Reddit-based insights using text analysis methods, specifically as related to growing trends of Hindu nationalism in India.
+
+## Research Questions
+
+1)  What are the dominant themes discussed in prominent Indian subreddits related to the Hindutva ideology?
+2)  What are the dominant sentiments of users discussing the Hindutva ideology on Indian subreddits?
+3)  Do some Indian subreddits engage in more extreme discussions of the Hindutva ideology than others?
+
+## Hypotheses
+
+1)  Some dominant themes that are discussed in Indian subreddits are related to fear of other religions, especially of Islam, and the promotion of Hindu nationalistic practices, such as cow worship.
+2)  The dominant sentiments in these Indian subreddits will be negative in relation to other religions and positive in relation to Hinduism.
+3)  Larger Indian subreddits will display a more neutral sentiment overall in their posts than smaller subreddits.
+
+## Methodology and Data Collection
+
+This project uses text analysis methods suitable for identifying frequently used terms in subreddit discussions. In particular, I’ve chosen to do a sentiment analysis of how people discuss topics related to Hindu nationalism. Topic modelling would add nuance to this analysis by identifying frequently mentioned themes and topics. I used scraped data from select subreddits (r/India and r/HindutvaRises) to answer my research question using the `RedditExtractoR` package. The posts on r/India cover broad topics such as politices, science and technology, finance, policy, and etiquette on the platform. Since there is a lack of literature on Reddit-based analysis of this topic, I consulted existing Reddit discussions listing the most extreme Indian subreddits, one of which was r/HindutvaRises (see https://www.reddit.com/r/unitedstatesofindia/comments/tl2fcp/rchodi_is_ded/?rdt=60857).
+r/India is the biggest Indian subreddit, and r/HindutvaRises is much smaller with a narrower focus.  I've chosen to compare these subreddits to understand whether the levels of extremism and sentiment differ by the size of the subreddit. The data used were collected on December 8th using the timeframe of a month sorted by newer posts, and so is cross-sectional data in nature.
+
+Collecting the required data from Reddit:
+```{r}
+# hindutvarises
+# collecting data from r/HindutvaRises
+# thread_hindutvarises <- find_thread_urls(subreddit="hindutvarises", sort_by="new", period="month")
+
+# combine 'title' and 'text' columns with blank separator 
+# thread_hindutvarises$title_text = paste(thread_hindutvarises$title, thread_hindutvarises$text, sep=" ")
+
+# save as csv
+# write.csv(thread_hindutvarises,file='/Users/ananyapujary/Desktop/DACSS/DACSS758/DACSS758/hindutvarisespost.csv', row.names=FALSE)
+
+# india
+# thread_india <- find_thread_urls(subreddit="india", sort_by="new", period="month")
+
+# combine 'title' and 'text' columns with blank separator 
+# thread_india$title_text = paste(thread_india$title, thread_india$text, sep=" ")
+
+# save as csv
+# write.csv(thread_india,file='/Users/ananyapujary/Desktop/DACSS/DACSS758/DACSS758/indiapost.csv', row.names=FALSE)
+```
+
+Skimming the dataset of comments from r/HindutvaRises and r/India:
+```{r}
+hindutvarises <- read.csv("hindutvarisespost.csv")
+str(hindutvarises)
+skim(hindutvarises)
+
+india <- read.csv("indiapost.csv")
+str(india)
+skim(india)
+
+```
+`hindutvarises` has 8 columns (6 character and 2 numeric) and 924 rows, and `india` has 8 columns (6 character and 2 numeric) and 747 rows.
+
+## Data Cleaning and Exploration
+
+Looking at the token distribution in the corpora created:
+```{r}
+require(readtext)
+
+# hindutvarises
+hindutvarises_corpus <- corpus(hindutvarises, text_field = "title_text") 
+
+hindutvarises_summary <- summary(hindutvarises_corpus)
+hindutvarises_summary
+
+# accessing tokens
+hindutvarises_summary$Tokens
+
+# india
+india_corpus <- corpus(india, text_field = "title_text")
+india_summary <- summary(india_corpus)
+india_summary
+
+# accessing tokens
+india_summary$Tokens
+```
+Looking at the corpus metadata:
+```{r}
+# corpus metadata
+docvars(hindutvarises_corpus)
+docvars(india_corpus)
+```
+
+Tokenizing the corpora by discarding punctuation, numbers, symbols, URLs, and English and Hindi stopwords:
+```{r}
+# tokenizing hindutvarises
+hindutvarises_tokens <- tokens(hindutvarises_corpus, remove_punct = T,
+                                    remove_numbers = T, remove_symbols = T,
+                               remove_url = T)
+hindutvarises_tokens <- tokens_select(hindutvarises_tokens, 
+                     pattern = stopwords(c("en")),
+                     selection = "remove")
+
+
+hindi_stop <- get_stopwords(language = "hi", source = "stopwords-iso")
+hindutvarises_tokens <- tokens_select(hindutvarises_tokens, 
+                     pattern = hindi_stop$word,
+                     selection = "remove")
+
+length(hindutvarises_tokens) # 924
+print(hindutvarises_tokens)
+
+hindutvarises_dfm <- dfm(hindutvarises_tokens)
+dim(hindutvarises_dfm) # 924 5512
+
+set.seed(1234)
+# draw the wordcloud
+textplot_wordcloud(hindutvarises_dfm, min_count = 20, random_order = FALSE, color = "orange")
+
+```
+This document-feature matrix has 924 rows and 5,512 columns. From the wordcloud generated, it is evident that 'hindu' is the most frequent word in this subreddit's post content, followed by similar words such as 'hindus' and 'hinduism'. Some words related to Hinduism are also visible, such as 'hanuman', 'shiv', and 'ram.' Some single letters like 'g', 'm', and 'k' are also frequently occuring, while could be due to accidental spaces between words. Notably, 'muslim' and 'muslims' are also frequently occurring words.
+
+
+### Wordcloud
+
+```{r}
+# tokenizing india
+india_tokens <- tokens(india_corpus, remove_punct = T,
+                                    remove_numbers = T, remove_symbols = T, remove_url = T)
+india_tokens <- tokens_select(india_tokens, 
+                     pattern = stopwords(c("en")),
+                     selection = "remove")
+
+india_tokens <- tokens_select(india_tokens, 
+                     pattern = hindi_stop$word,
+                     selection = "remove")
+
+length(india_tokens) # 747
+print(india_tokens)
+
+india_dfm <- dfm(india_tokens)
+dim(india_dfm) # 747 9004
+
+set.seed(1234)
+# draw the wordcloud
+textplot_wordcloud(india_dfm, min_count = 40, random_order = FALSE, color = "orange")
+```
+This document-feature matrix `india_dfm` has 747 rows and 9,004 columns. In its wordcloud, 'india' is the most frequently occurring word, followed by common words such as 'just', 'can', and 'people.' Compared to the previous wordcloud, this one has more general terms that aren't particularly related to religion, which makes sense since this subreddit is used as a forum for general questions.
+
+Examining the usage of the term "muslim" and "modi" in both corpora and its first ten uses so we can understand the context in which it is used:
+
+```{r}
+# "muslim"
+# check the use of "muslim" in hindutvarises
+kwic_muslim_hindutva <- kwic(hindutvarises_corpus,
+                        pattern = c("muslim"),
+                        window = 10)
+
+# look at the first few uses
+head(kwic_muslim_hindutva)
+
+# check the use of "muslim" in india
+kwic_muslim_india <- kwic(india_corpus,
+                        pattern = c("muslim"),
+                        window = 10)
+
+# look at the first few uses
+head(kwic_muslim_india)
+```
+In r/HindutvaRises, there is a clear negative sentiment attached to posts with this term. For example, some entries describe incidents of forced religious conversion of Hindus to Islam and how the partition of Pakistan and India was a good thing. On the other hand, r/India, some users express disdain over religious polarization in India, while others report on news using the term, remaining more neutral in its usage.
+
+```{r}
+# "modi"
+# check the use of "modi" in hindutvarises
+kwic_modi_hindutva <- kwic(hindutvarises_corpus,
+                        pattern = c("modi"),
+                        window = 10)
+
+# look at the first few uses
+head(kwic_modi_hindutva)
+
+# check the use of "modi" in india
+kwic_modi_india <- kwic(india_corpus,
+                        pattern = c("modi"),
+                        window = 10)
+
+# look at the first few uses
+head(kwic_modi_india)
+```
+In r/HindutvaRises, Modi is seen as not extreme enough in advancing the Hindutva agenda. r/India  users have a more mixed reaction in their usage of this term, with most of them reading as news headlines.
+
+
+### Feature Co-Occurrence Matrix
+
+Similar to the wordcloud results, the most frequently occurring terms in `hindutvarises_dfm` are "hindu", "g", "hindus", "india", and single letters like "k" and "m". In `india_dfm`, these are "can", "like", "india", "people", and "just".
+```{r}
+topfeatures(hindutvarises_dfm, 20)
+topfeatures(india_dfm, 20)
+```
+
+Creating a feature co-occurrence matrix for `hindutvarises_dfm`:
+```{r}
+# create fcm from dfm
+hindutvarises_fcm <- fcm(hindutvarises_dfm)
+
+# check the dimensions (i.e., the number of rows and the number of columnns) of the matrix we created
+dim(hindutvarises_fcm)
+
+# pull the top features
+myFeatures1 <- names(topfeatures(hindutvarises_fcm, 30))
+
+# retain only those top features as part of our matrix
+even_smaller_fcm1 <- fcm_select(hindutvarises_fcm, pattern = myFeatures1, selection = "keep")
+
+# check dimensions
+dim(even_smaller_fcm1)
+
+# compute size weight for vertices in network
+size1 <- log(colSums(even_smaller_fcm1))
+
+set.seed(1234)
+# create plot
+textplot_network(even_smaller_fcm1, vertex_size = size1/ max(size1) * 3,edge_color = "orange")
+```
+The feature-co-occurrence matrix above shows a slight fragmentation in the discussion of terms, possibly indicating the presence of echo chambers since some conversations seem to be limited to certain users. The biggest network includes commonly used Hindutva terms such as 'akhand' and 'bharat', which when used together translates to 'Undivided India.' This idea envisions India claim over, and intention to unify with, its neighboring countries of Bangladesh, Afghanistan, Pakistan, Myanmar, and Sri Lanka. Religious terms such as 'diwali', 'asur', and 'kali' have also been found to occur together. '#x200b' is an anomaly in this matrix and is a unicode character code for zero-width space, and so is 'amp' which stands for 'ampersand' (&). 
+
+Creating a feature co-occurrence matrix for `india_dfm`:
+```{r}
+# create fcm from dfm
+india_fcm <- fcm(india_dfm)
+
+# check the dimensions (i.e., the number of rows and the number of columnns) of the matrix we created
+dim(india_fcm)
+
+# pull the top features
+myFeatures2 <- names(topfeatures(india_fcm, 30))
+
+# retain only those top features as part of our matrix
+even_smaller_fcm2 <- fcm_select(india_fcm, pattern = myFeatures2, selection = "keep")
+
+# check dimensions
+dim(even_smaller_fcm2)
+
+# compute size weight for vertices in network
+size2 <- log(colSums(even_smaller_fcm2))
+
+# create plot
+textplot_network(even_smaller_fcm2, vertex_size = size2/ max(size2) * 3, edge_color = "orange")
+```
+This subreddit's co-occurrence matrix involves a lot more words commonly used in general conversations such as 'started', 'people', and 'also'. Unlike the previous subreddit's matrix, this network is not fragmented at all and is much more dense, suggesting a greater consensus and interconnectedness in discussions.
+
+
+## Sentiment Analysis
+
+In this section, I'll be using dictionary analysis to analyze sentiment with the NRC dictionary. First, I'm creating new document-feature matrices for this analysis:
+```{r}
+# hindutvarises
+
+hindutvarises_dfm_nrc <- hindutvarises_tokens %>%
+  tokens_tolower() %>%
+  dfm() %>%
+  dfm_lookup(data_dictionary_NRC)
+  
+  
+dim(hindutvarises_dfm_nrc) # 924  10
+head(hindutvarises_dfm_nrc, 10) # 10 documents, 10 features (62.00% sparse) and 7 docvars
+class(hindutvarises_dfm_nrc)
+
+# india
+india_dfm_nrc <- india_tokens %>%
+  tokens_tolower() %>%
+  dfm() %>%
+  dfm_lookup(data_dictionary_NRC)
+  
+  
+dim(india_dfm_nrc) # 747  10
+head(india_dfm_nrc, 10) # 10 documents, 10 features (65.00% sparse) and 7 docvars
+class(india_dfm_nrc)
+```
+Creating a polarity measure:
+```{r}
+# hindutvarises
+df_hindutvarises_nrc <- convert(hindutvarises_dfm_nrc, to = "data.frame")
+
+df_hindutvarises_nrc$polarity <- (df_hindutvarises_nrc$positive - df_hindutvarises_nrc$negative)/(df_hindutvarises_nrc$positive + df_hindutvarises_nrc$negative)
+
+df_hindutvarises_nrc$polarity[(df_hindutvarises_nrc$positive + df_hindutvarises_nrc$negative) == 0] <- 0
+
+# india
+df_india_nrc <- convert(india_dfm_nrc, to = "data.frame")
+
+df_india_nrc$polarity <- (df_india_nrc$positive - df_india_nrc$negative)/(df_india_nrc$positive + df_india_nrc$negative)
+
+df_india_nrc$polarity[(df_india_nrc$positive + df_india_nrc$negative) == 0] <- 0
+```
+
+Graphing the distribution of polarity scores in both subreddits:
+```{r}
+# hindutvarises
+nrc_hindutvarises_pos <- ggplot(df_hindutvarises_nrc,aes(fill="orange")) +
+  geom_histogram(aes(x=polarity)) +
+  theme_bw() + 
+  ggtitle('r/HindutvaRises') + guides(fill="none")
+
+# india
+nrc_india_pos <- ggplot(df_india_nrc,aes(fill="orange")) +
+  geom_histogram(aes(x=polarity)) +
+  theme_bw() + ylim(0, 500) +
+  ggtitle('r/India') + guides(fill="none")
+
+nrc_hindutvarises_pos + nrc_india_pos + plot_annotation(
+  title = 'Polarity Score Distribution')
+```
+Clearly, a lot of posts have been classified as "neutral" in polarity in both subreddits, particularly in the smaller subreddit (more than 450). There are more positively coded posts and titles in r/India than r/HindutvaRises.
+
+Looking at some of the posts that were classified as neutral:
+```{r}
+# hindutvarises
+writeLines(head(hindutvarises_corpus[which(df_hindutvarises_nrc$polarity == 0)]))
+
+# india
+writeLines(head(india_corpus[which(df_india_nrc$polarity == 0)]))
+
+```
+For r/HindutvaRises, these results return posts and titles that seem to be either more negative or positive in sentiment. Two of the results are in Hindi as transliterated into English. In r/India, most of the posts classified as neutral polarity are general questions and calls for advice on shopping and other day-to-day events. Analyzing the text and title of posts as separate corpora yielded a similar distribution of results.
+
+## Structural Topic Modeling
+
+### r/HindutvaRises
+
+Adding `polarity` to the main datasets and creating new document-feature matrices separated by the polarity value for this analysis. First, for r/HindutvaRises:
+```{r}
+# hindutvarises
+# adding sentiment polarity to dataset
+hindutvarises$polarity <- df_hindutvarises_nrc$polarity
+
+# separate dataset by polarity and created dfms
+hindutvarises_polminus <- subset(hindutvarises, polarity < 0)
+hindutvarises_polzero <- subset(hindutvarises, polarity == 0)
+hindutvarises_polplus <- subset(hindutvarises, polarity > 0)
+
+hindutvarises_minus_stm <- dfm(tokens(hindutvarises_polminus$title_text),
+             tolower = TRUE,
+             remove = stopwords("en"),
+             remove_punct = TRUE,
+             remove_symbols = TRUE,
+             remove_numbers = TRUE,
+             remove_url = TRUE)
+
+hindutvarises_zero_stm <- dfm(tokens(hindutvarises_polzero$title_text),
+             tolower = TRUE,
+             remove = stopwords("en"),
+             remove_punct = TRUE,
+             remove_symbols = TRUE,
+             remove_numbers = TRUE,
+             remove_url = TRUE)
+
+hindutvarises_plus_stm <- dfm(tokens(hindutvarises_polplus$title_text),
+             tolower = TRUE,
+             remove = stopwords("en"),
+             remove_punct = TRUE,
+             remove_symbols = TRUE,
+             remove_numbers = TRUE,
+             remove_url = TRUE)
+
+dim(hindutvarises_minus_stm) # 141 2182
+dim(hindutvarises_zero_stm) # 478 2100
+dim(hindutvarises_plus_stm) # 305 3141
+```
+
+My code for choosing the most ideal k-value for these datasets did not run unfortunately, so I'm choosing my k-value as an arbitrary value of 4. Hence, I'll be extracting 4 predominant topics in these datasets.
+
+```{r}
+# choose our number of topics
+k <- 4
+
+# minus model
+model_hindutvaminus <- stm(hindutvarises_minus_stm,
+               K = k,
+               data = hindutvarises_polminus,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(model_hindutvaminus)
+
+plot_hindutvaminus <- plot(model_hindutvaminus, type = "summary", main = "r/HindutvaRises Top Topics (Polarity < 0)")
+
+# get the words
+topicnames_hindutvaminus <- labelTopics(model_hindutvaminus, n=4)$frex
+
+# set up an empty vector
+topiclabels_hindutvaminus <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  topiclabels_hindutvaminus[i] <- paste(topicnames_hindutvaminus[i,], collapse = "_")
+}
+
+# print the names
+topiclabels_hindutvaminus
+```
+
+
+```{r}
+# zero model
+model_hindutvazero <- stm(hindutvarises_zero_stm,
+               K = k,
+               data = hindutvarises_polzero,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(model_hindutvazero)
+
+plot_hindutvazero <-plot(model_hindutvazero, type = "summary", main = "r/HindutvaRises Top Topics (Polarity = 0)")
+
+# get the words
+topicnames_hindutvazero <- labelTopics(model_hindutvazero, n=4)$frex
+
+# set up an empty vector
+topiclabels_hindutvazero <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  topiclabels_hindutvazero[i] <- paste(topicnames_hindutvazero[i,], collapse = "_")
+}
+
+# print the names
+topiclabels_hindutvazero
+```
+
+
+```{r}
+# plus model
+model_hindutvaplus <- stm(hindutvarises_plus_stm,
+               K = k,
+               data = hindutvarises_polplus,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(model_hindutvaplus)
+
+plot_hindutvaplus <- plot(model_hindutvaplus, type = "summary", main = "r/HindutvaRises Top Topics (Polarity > 0)")
+
+# get the words
+topicnames_hindutvaplus <- labelTopics(model_hindutvaplus, n=4)$frex
+
+# set up an empty vector
+topiclabels_hindutvaplus <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  topiclabels_hindutvaplus[i] <- paste(topicnames_hindutvaplus[i,], collapse = "_")
+}
+
+# print the names
+topiclabels_hindutvaplus
+
+```
+
+
+It seems that topics related to Hinduism are present across all polarity score levels, and the model with terms coded as more positive includes 'india' more frequently across topics. Furthermore, the topic with the greatest proportion in this model are related to Hindu rituals and gods. In the model with terms coded as neutral, the most frequently occurring words are single letters such as 'g','m', and 'k', which are probably typos. 'K' could also refer to the shortened version of 'okay.'
+
+
+### r/India
+
+Next, for r/India:
+```{r}
+# india
+# adding sentiment polarity to dataset
+india$polarity <- df_india_nrc$polarity
+
+# separate dataset by polarity and created dfms
+india_polminus <- subset(india, polarity < 0)
+india_polzero <- subset(india, polarity == 0)
+india_polplus <- subset(india, polarity > 0)
+
+india_minus_stm <- dfm(tokens(india_polminus$title_text),
+             tolower = TRUE,
+             remove = stopwords("en"),
+             remove_punct = TRUE,
+             remove_symbols = TRUE,
+             remove_numbers = TRUE,
+             remove_url = TRUE)
+
+india_zero_stm <- dfm(tokens(india_polzero$title_text),
+             tolower = TRUE,
+             remove = stopwords("en"),
+             remove_punct = TRUE,
+             remove_symbols = TRUE,
+             remove_numbers = TRUE,
+             remove_url = TRUE)
+
+india_plus_stm <- dfm(tokens(india_polplus$title_text),
+             tolower = TRUE,
+             remove = stopwords("en"),
+             remove_punct = TRUE,
+             remove_symbols = TRUE,
+             remove_numbers = TRUE,
+             remove_url = TRUE)
+
+dim(india_minus_stm) # 183 3171
+dim(india_zero_stm) # 157 1519
+dim(india_plus_stm) # 407 7314
+```
+
+```{r}
+# choose our number of topics
+k <- 4
+
+# minus model
+model_indiaminus <- stm(india_minus_stm,
+               K = k,
+               data = india_polminus,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(model_indiaminus)
+
+plot(model_indiaminus, type = "summary", main = "r/India Top Topics (Polarity < 0)")
+
+# get the words
+topicnames_indiaminus <- labelTopics(model_indiaminus, n=4)$frex
+
+# set up an empty vector
+topiclabels_indiaminus <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  topiclabels_indiaminus[i] <- paste(topicnames_indiaminus[i,], collapse = "_")
+}
+
+# print the names
+topiclabels_indiaminus
+
+# [1] "livpure_congress_force_mp" "caste_class_sister_agoda"  "hard_non_vegan_indians"   
+# [4] "m_asleep_clean_hai"    
+```
+
+
+```{r}
+# zero model
+model_indiazero <- stm(india_zero_stm,
+               K = k,
+               data = india_polzero,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(model_indiazero)
+
+plot(model_indiazero, type = "summary", main = "r/India Top Topics (Polarity = 0)")
+
+# get the words
+topicnames_indiazero <- labelTopics(model_indiazero, n=4)$frex
+
+# set up an empty vector
+topiclabels_indiazero <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  topiclabels_indiazero[i] <- paste(topicnames_indiazero[i,], collapse = "_")
+}
+
+# print the names
+topiclabels_indiazero
+
+# [1] "report_entry_amp_format"   "order_inside_use_back"     "roads_data_every_many"    
+# [4] "congress_news_state_coins"
+```
+
+
+```{r}
+# plus model
+model_indiaplus <- stm(india_plus_stm,
+               K = k,
+               data = india_polplus,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(model_indiaplus)
+
+plot(model_indiaplus, type = "summary", main = "r/India Top Topics (Polarity > 0)")
+
+# get the words
+topicnames_indiaplus <- labelTopics(model_indiaplus, n=4)$frex
+
+# set up an empty vector
+topiclabels_indiaplus <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  topiclabels_indiaplus[i] <- paste(topicnames_indiaplus[i,], collapse = "_")
+}
+
+# print the names
+topiclabels_indiaplus
+
+# [1] "ama_auto_lk_named"                   "passport_coins_u_problems"          
+# [3] "project_lakh_refund_zomato"          "certificate_protein_therapy_tickets"
+```
+
+In the bigger subreddit's model for negatively coded posts, 'caste' is frequently mentioned, implying disapproval of the caste system. The neutral and positive models include more general terms, such as 'news', 'people', and 'university.' Other than these differences, the topic models seem pretty similar even though they differ by polarity. This result complies with the overarching purpose of the subreddit, which has a large scope not limited to religious discussions unlike r/HindutvaRises.
+
+
+
+## Conclusion
+
+Overall, these results offer partial support to the hypotheses. The text analysis methods used showcase a discussion of other religions such as Islam and Sikhism, in a negative light more often than not in the smaller subreddit. Hindu rituals and certain extremist ideas (e.g. 'akhand bharat' and 'sanatan dharma') emerge as clear topics in the smaller subreddit of r/HindutvaRises and are talked about in a more positive manner. At the same time, sentiment analysis reveal that most of the posts scraped from this subreddit were found to have neutral polarity to a greater extent than r/India, contradicting the third hypothesis of the larger subreddit being more neutral in overall sentiment than the smaller one. Thus, the smaller subreddit not as extreme as expected. r/India includes more general discussions of politics and other less extreme civilian matters. This bigger subreddit also has more posts that have a positive polarity.
+
+Some limitations of this project is the limited multilingual inclusion, which could affect the result of the text analysis. A perusal of the posts in these datasets indicate that a substantial amount of the text is in Hindi as transliterated to English, so existing English-based models may not pick up on some stopwords. Also, I was unable to choose a more meaningful K-value in the structural topic modeling analysis due to issues running the code. In terms of the data, it is cross-sectional in nature and only covers a month of posts. It was also not collected at a particularly relevant time period, so it may not be very representative of the subreddits. Lastly, only two subreddits out of several were analyzed, which may lead to low generalizability.
+  
+Nevertheless, this research ventures into a lesser-explored social media in the Indian context, paving the path for more in-depth and extensive insights. Future research could compare more subreddits over a relevant time period such as during election seasons. In the structural modeling section, more experimentation with k-values could be done to find an optimal number of topics for each subreddit. 
+
+
+## References
+
+Chakraborty, S., Pal, J., Chandra, P., & Romero, D. M. (2018a). Political Tweets and Mainstream News Impact in India: A Mixed Methods Investigation into Political Outreach. Proceedings of the 1st ACM SIGCAS Conference on Computing and Sustainable Societies. https://doi.org/10.1145/3209811.3209825. 
+
+Manuvie, R., & Chatterjee, S. (2023). Automated Sentiment and Hate Speech Analysis of Facebook Data by Employing Multilingual Transformer Models. Computation and Language, 1–11. https://doi.org/https://doi.org/10.48550/arXiv.2301.13668.  
+
+M. N., P. (2023, February 28). India's YouTube Vigilante is Wanted for Murder. Wired. https://www.wired.com/story/indias-youtube-vigilante-monu-manesar-murder/.
+
+Saraswat, R. (2022, January 25). Out of Sight: How Reddit became a "safe space" for hate in India. TheQuint. https://www.thequint.com/neon/web-culture/out-of-sight-how-reddit-became-a-safe-space-for-hate.
+
+Siyech, M. S. (2021). An Introduction to Right-Wing Extremism in India. New England Journal of Public Policy, 33(2). https://scholarworks.umb.edu/cgi/viewcontent.cgi?article=1809&context=nejpp.
+
+
+```{r}
+# save(hindutvacomments, file = "hindutvacomments.rda")
+# save(df_nrc, file = "hindutvacomments_sentiments.rda")
+
+# hindutvarises <- read.csv("hindutvarisespost.csv")
+# save(hindutvarises, file = "hindutvarises.rda")
+# 
+# india <- read.csv("indiapost.csv")
+# save(india, file = "india.rda")
+# 
+# save(model_hindutvaminus, file = "model_hindutvaminus.rda")
+# save(model_hindutvazero, file = "model_hindutvazero.rda")
+# save(model_hindutvaplus, file = "model_hindutvaplus.rda")
+# 
+# save(model_indiaminus, file = "model_indiaminus.rda")
+# save(model_indiazero, file = "model_indiazero.rda")
+# save(model_indiaplus, file = "model_indiaplus.rda")
+```
+
